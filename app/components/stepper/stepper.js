@@ -1,5 +1,9 @@
 import React, {Component} from 'react'
+import { connect } from 'react-redux'
 import styled, {ThemeProvider, injectGlobal} from 'styled-components'
+import {preparation, canWalk, walk, cancel} from './actionCreators/actionCreators'
+
+export const reducers = {}
 const Container = styled.section`
 	display: flex;
 	flex: 0.85;
@@ -10,7 +14,7 @@ const Container = styled.section`
 	width: 75%;
 	border: 1px solid rgba(0, 0, 0, 0.15);
 	border-radius: 1%;
-	box-shadow: 0 0 5px rgba(0,0,0,0.10); 
+	box-shadow: 0 0 5pt rgba(0,0,0,0.10); 
 `
 const Header = styled.header`
 	flex: 0.15;
@@ -36,12 +40,12 @@ const StepC = styled.div`
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	width: 24px;
-	height: 24px;
+	width: 24pt;
+	height: 24pt;
 	${props => props.theme.color ? '' : 'color: '+props.theme.color};
 	background-color: ${props => props.theme.bgcolor};
 	border-radius: 50%;
-	margin-right: 15px;
+	margin-right: 15pt;
 `
 const StepT = styled.div`
 	display: flex;
@@ -51,7 +55,7 @@ const StepT = styled.div`
 `
 const Separator = styled.div`
 	flex: 0.12;
-	border-bottom: 2px solid rgba(0, 0, 0, 0.15);
+	border-bottom: 2pt solid rgba(0, 0, 0, 0.15);
 `
 const Footer = styled.footer`
 	flex: 0.15;
@@ -61,7 +65,7 @@ const Footer = styled.footer`
 	justify-content: space-between;
 	align-items: center;
 	color: #ffffff;
-	border-bottom: 2px solid rgba(0, 0, 0, 0.15);
+	border-bottom: 2pt solid rgba(0, 0, 0, 0.15);
 `
 const Button = styled.span`
 	color: ${props => props.available 
@@ -93,40 +97,56 @@ const inactive= {
 	,color: 'rgba(0, 0, 0, 0.3)'
     ,tcolor: 'rgba(0, 0, 0, 0.38)'
 }
-
-export default class Stepper extends Component{
+const Content = styled.div`
+	flex:1;
+	display: flex;
+	width: 100%;
+	justify-content: center;
+	align-items: center;
+`
+class Stepper extends Component{
 	constructor(props) {
-	  super(props)
+	  	super(props)
+		let steps = []
+        this.headerContent = []
+		let childs = !Array.isArray(this.props.children)?[ ...this.props.children]:[this.props.children]
+        childs.forEach((e,i,a)=>{
+            steps.push({
+				active: false
+				,done: typeof e === 'function' && e.prototype.isReactComponent ? false : true
+				,result: {}
+			})
+            this.headerContent.push(
+            	[
+            	<ThemeProvider key={'Step'+i} theme={this.props.currentStep == i ?active:inactive}>
+					<Step>
+						<StepC>{i+1}</StepC>
+						<StepT>Шаг {i+1}</StepT>
+					</Step>
+				</ThemeProvider>
+            	,i<a.length-1? <Separator/>:null
+            	]
+            )
+        })
+        this.headerContent = [].concat(...this.headerContent)
+
+		//init action create
+		this.props.prepare(steps)
+
 	}
 	render(){
 		return (
 			<Container>
 				<Header>
-					<ThemeProvider theme={active}>
-						<Step active>
-							<StepC>1</StepC>
-							<StepT>Шаг 1</StepT>
-						</Step>
-					</ThemeProvider>
-					<Separator/>
-					<ThemeProvider theme={inactive}>
-						<Step active>
-							<StepC>2</StepC>
-							<StepT>Шаг 2</StepT>
-						</Step>
-					</ThemeProvider>
-					<Separator/>
-					<ThemeProvider theme={inactive}>
-						<Step active>
-							<StepC>3</StepC>
-							<StepT>Шаг 3</StepT>
-						</Step>
-					</ThemeProvider>
+					{this.headerContent}
 				</Header>
+				<Content>
+					{this.props.children}
+				</Content>
 				<Footer>
-					<Button>BACK</Button>
+					<Button onClick={{/*this.props.walk('BACK')*/}}>BACK</Button>
 					<GrpBTN>
-						<Button available>CANCEL</Button>
+						<Button available onClick={{/*this.props.cancel()*/}}>CANCEL</Button>
 						<Button available={'C'}>CONTINUE</Button>
 					</GrpBTN>
 				</Footer>
@@ -134,3 +154,25 @@ export default class Stepper extends Component{
 		)
 	}
 }
+
+const mapState2props = (state)=>{
+	return {
+		currentStep: state.current
+	}
+}
+
+const mapDispatch2props = (dispatch)=>{
+    return {
+    	prepare: steps => dispatch( preparation(steps) )
+		,walk: where => dispatch( walk(where) )
+		,canWalk: whereFrom => dispatch( canWalk(whereFrom) )
+		,cancel: () => dispatch( cancel() )
+    }
+}
+
+const StepperContainer = connect(
+    mapState2props,
+    mapDispatch2props
+)(Stepper)
+
+export default StepperContainer
