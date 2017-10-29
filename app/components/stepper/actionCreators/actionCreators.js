@@ -8,19 +8,27 @@ export function preparation(steps) {
 export function canWalk(whereFrom) {
     return {
         type: 'CANWALK'
-        ,where: whereFrom //from which component. there is must be an identifier for each components on each step
+        ,whereFrom: whereFrom
     }
 }
 
 export function walk(where) {
     return {
         type: 'WALK'
-        ,where: where //forvard or back
+        ,where: where
     }
 }
 
 export function cancel() {
     return {
         type: 'CANCEL'
+    }
+}
+
+export function result(which, resultObj) {
+    return {
+        type: 'RESULT'
+        ,which
+        ,resultObj
     }
 }

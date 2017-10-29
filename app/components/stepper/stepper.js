@@ -1,9 +1,8 @@
 import React, {Component} from 'react'
 import { connect } from 'react-redux'
-import styled, {ThemeProvider, injectGlobal} from 'styled-components'
-import {preparation, canWalk, walk, cancel} from './actionCreators/actionCreators'
+import styled, {ThemeProvider} from 'styled-components'
+import {preparation, canWalk, walk, cancel, result } from './actionCreators/actionCreators'
 
-export const reducers = {}
 const Container = styled.section`
 	display: flex;
 	flex: 0.85;
@@ -77,10 +76,12 @@ const Button = styled.span`
 	font-weight: 400;
 	margin: 1em;
 	padding: 0.25em 1em;
+	&:hover {
+		cursor: pointer;
+	};
 `;
 const GrpBTN = styled.div`
-	flex: 0.2;
-	
+	flex: 0.2;	
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
@@ -104,50 +105,72 @@ const Content = styled.div`
 	justify-content: center;
 	align-items: center;
 `
+const Galo4ka = styled.div`
+	flex:0.6;
+	margin-bottom: 17%;
+    height: 24%;
+    border-left: 3pt solid #ffffff;
+    transform: rotate(-50deg);
+    border-bottom: 3pt solid #ffffff;
+`
+const StepEl = props =>{
+	return (
+		<ThemeProvider theme={props.current >= props.nmbr ?active:inactive}>
+			<Step>
+				<StepC>{props.current>props.nmbr?<Galo4ka/>:props.nmbr+1}</StepC>
+				<StepT>Шаг {props.nmbr+1}</StepT>
+			</Step>
+		</ThemeProvider>
+	)
+}
+const Hdr = props=>{
+	let steps = []
+	for (var i = 0; i<props.count; i++){
+		steps.push(<StepEl key={'step'+i} nmbr={i} current={props.current}/>)
+		if (i<props.count-1)steps.push(<Separator key={'sep'+i}/>)
+
+	}
+	return(
+		<Header>{steps}</Header>
+	)
+}
 class Stepper extends Component{
+	static done(whichChild){
+		return canWalk(whichChild)
+	}
+    static result(which, resultObj){
+        return canWalk(which, resultObj)
+    }
 	constructor(props) {
 	  	super(props)
-		let steps = []
-        this.headerContent = []
-		let childs = !Array.isArray(this.props.children)?[ ...this.props.children]:[this.props.children]
-        childs.forEach((e,i,a)=>{
-            steps.push({
+		//не пользуемся this.props.children напрямую, т.к. при 1 дочернем элементе
+		//он будет явлляться самим элементом, а при >1 - массивом
+		this.childs = Array.isArray(this.props.children)?this.props.children:[this.props.children]
+		const steps = this.childs.map((e,i,a)=>{
+            return {
 				active: false
-				,done: typeof e === 'function' && e.prototype.isReactComponent ? false : true
+				,done: React.isValidElement(e) && typeof e.type === 'function' ? false : true
 				,result: {}
-			})
-            this.headerContent.push(
-            	[
-            	<ThemeProvider key={'Step'+i} theme={this.props.currentStep == i ?active:inactive}>
-					<Step>
-						<StepC>{i+1}</StepC>
-						<StepT>Шаг {i+1}</StepT>
-					</Step>
-				</ThemeProvider>
-            	,i<a.length-1? <Separator/>:null
-            	]
-            )
+			}
         })
-        this.headerContent = [].concat(...this.headerContent)
-
-		//init action create
 		this.props.prepare(steps)
-
 	}
 	render(){
 		return (
 			<Container>
-				<Header>
-					{this.headerContent}
-				</Header>
+				<Hdr count={this.childs.length} current={this.props.currentStep}/>
 				<Content>
-					{this.props.children}
+					{this.childs[this.props.currentStep]}
 				</Content>
 				<Footer>
-					<Button onClick={{/*this.props.walk('BACK')*/}}>BACK</Button>
+					<Button onClick={()=>{this.props.walk(this.props.currentStep-1)}}>BACK</Button>
 					<GrpBTN>
-						<Button available onClick={{/*this.props.cancel()*/}}>CANCEL</Button>
-						<Button available={'C'}>CONTINUE</Button>
+						<Button available onClick={()=>{this.props.cancel()}}>CANCEL</Button>
+						<Button available={'C'}
+								onClick={()=>{this.props.walk(this.props.currentStep+1)}}
+								>
+							CONTINUE
+						</Button>
 					</GrpBTN>
 				</Footer>
 			</Container>
@@ -155,9 +178,9 @@ class Stepper extends Component{
 	}
 }
 
-const mapState2props = (state)=>{
+const mapState2props = ({routerReducer})=>{
 	return {
-		currentStep: state.current
+		currentStep: routerReducer.current
 	}
 }
 
@@ -165,7 +188,6 @@ const mapDispatch2props = (dispatch)=>{
     return {
     	prepare: steps => dispatch( preparation(steps) )
 		,walk: where => dispatch( walk(where) )
-		,canWalk: whereFrom => dispatch( canWalk(whereFrom) )
 		,cancel: () => dispatch( cancel() )
     }
 }
